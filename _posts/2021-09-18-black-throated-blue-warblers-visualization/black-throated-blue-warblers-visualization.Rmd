@@ -1,0 +1,139 @@
+---
+title: "Black-Throated Blue Warblers linear model selection"
+description: |
+  A short description of the post.
+author:
+  - name: Elmera Azadpour
+    url: {}
+date: 2021-09-18
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+### To access data, html and Rmd files: 
++ https://github.com/elmeraa/elmera-azadpour-206-final
++ you will find the warblers data in the "exam_data" folder
++ you will find the Rmd and html files in the "task_code" folder
+
+```{r setup}
+library(tidyverse)
+library(here)
+library(broom)
+library(car)
+library(GGally)
+library(stargazer)
+```
+
+```{r}
+## Read in bt_warblers.csv
+warblers <- read_csv(here("_posts", "2021-09-18-black-throated-blue-warblers-visualization","bt_warblers.csv"))
+```
+
+## Data exploration and visualization
+```{r, echo = FALSE, error = FALSE, warning=FALSE, message=FALSE}
+warblers_clean <- warblers %>% filter_all(all_vars(.> -98))
+
+warblers$age_banded <- as.factor(warblers$age_banded)
+age_banded.labs <- c("After Second Year", "After Hatch Year", "Second Year")
+names(age_banded.labs) <- c("ASY", "AHY", "SY")
+
+
+## Wing length versus bird mass, with color indicating sex and faceted by bird age at capture
+ggplot(warblers_clean, aes(x = wing_r,
+                     y = mass)) +
+  geom_point(aes(col= sex)) +
+  facet_wrap(~age_banded, labeller = labeller(age_banded = age_banded.labs)) +
+  labs(y = "Bird mass (g)", x = "Right wing length (mm)") +
+  scale_colour_discrete(name = "Sex")
+
+## Bill cross-section depth vs bird mass with color indicating sex and faceted by elevation
+warblers$elevation <- as.factor(warblers$elevation)
+elevation.labs <- c("Low elevation", "Mid elevation", "High elevation")
+names(elevation.labs) <- c("low", "mid", "high")
+
+ggplot(warblers_clean, aes(x = bill_depth,
+                     y = mass)) +
+  geom_point(aes(col= sex)) +
+  facet_wrap(~elevation, labeller = labeller(elevation = elevation.labs)) +
+  labs(x = "Bill cross-section depth (mm)", y = "Bird mass (g)") +
+  scale_colour_discrete(name = "Sex")
+
+
+## Culmen length (i.e. upper bill ridge length) vs Right wing length with color indicating sex and faceted by elevation
+ggplot(warblers_clean, aes(x = bill_culmen,
+                     y = wing_r)) +
+  geom_point(aes(col= sex)) +
+  facet_wrap(~elevation, labeller = labeller(elevation = elevation.labs)) +
+  labs(x = "Culmen length (mm)", y = "Right wing length (mm)") +
+  scale_colour_discrete(name = "Sex")
+```
+
+```{r, error=FALSE, warning=FALSE, message=FALSE}
+## Model 1: DV is bird mass, predictor variables are: right wing length (mm), tarsus length (mm), age of bird at capture, and sex. 
+warblers_lm <- lm(mass ~ wing_r + tarsus1 + age_banded + sex, data = warblers_clean)
+summary(warblers_lm)
+AIC(warblers_lm) # 1202.795
+vif(warblers_lm) 
+warblers_lm 
+
+warblers_lm_tidy <- tidy(warblers_lm)
+warblers_lm_tidy
+
+warblers_lm_fit <- glance(warblers_lm)
+warblers_lm_fit
+
+plot(warblers_lm)
+
+## Model 2: DV is bird mass, predictor variables are:  tarsus length (mm), age of bird at capture, and sex. 
+warblers_lm2 <- lm(mass ~  tarsus1 + age_banded + sex, data = warblers_clean)
+summary(warblers_lm2)
+AIC(warblers_lm2) # 1222.922
+vif(warblers_lm2)
+plot(warblers_lm2)
+warblers_lm_fit2 <- glance(warblers_lm2)
+
+## Model 3: DV is bird mass, predictor variables are: age of bird at capture, and sex. 
+warblers_lm3 <- lm(mass ~ age_banded + sex, data = warblers_clean)
+summary(warblers_lm3)
+AIC(warblers_lm3) # 1226.497
+vif(warblers_lm3)
+plot(warblers_lm3)
+warblers_lm_fit3 <- glance(warblers_lm3)
+
+# Histograms
+ggplot(data = warblers_clean, aes(x = mass)) +
+  geom_histogram(bins = 15) +
+  facet_wrap(~sex, scales = "free")
+
+# QQ Plots
+ggplot(data= warblers_clean, aes(sample = mass)) +
+  geom_qq() +
+  facet_wrap(~sex)
+```
+
+### Regression table
+```{r,  results = "asis", error=FALSE}
+stargazer(warblers_lm, type = "html")
+```
+
+### Model Selection and Justification 
+**Model 1:** DV is bird mass, predictor variables are: right wing length (mm), tarsus length (mm), age of bird at capture, and sex. (I have selected this one as the final model).
+*Model 2:* DV is bird mass, predictor variables are:  tarsus length (mm), age of bird at capture, and sex.
+*Model 3:* DV is bird mass, predictor variables are: age of bird at capture, and sex.
+
++ Warblers data set is normally distributed for mass with respect to sex. 
+
++ When looking at the Residual Variances, for Homoscedasticity, it appears residuals appear more randomly distributed evenly around the horizontal dotted line compared to model 2 and model 3.
+
++ Residual plots and Q-Q plots visually show that model 1  meets the homoscedasticity and normality assumptions of linear regression.
+
++ AIC score for model 1 was the lowest (`r round(warblers_lm_fit$AIC, 2)`) compared to model 2 (`r round(warblers_lm_fit2$AIC, 2)`) and 3 (`r round(warblers_lm_fit3$AIC, 2)`). 
+
++ Conceptually, including predictor variables like wing length, tarsus length, age of bird capture and sex indicate a stronger correlation to bird mass (`r round(warblers_lm_fit$adj.r.squared, 2)`). The adjusted R^2^ value here (`r round(warblers_lm_fit$adj.r.squared, 2)`) indicates that `r 100*round(warblers_lm_fit$adj.r.squared, 2)` % of variance in body mass is explained by these variables included in the model.
+
+#### Interpreting given coeffients in Model 1:
++ The slope of the linear model was 0.0739 for right wing length (mm), 0.0743 for tarsus length (mm), -0.052 for age of bird at capture, -1.043 for sex, and the y-intercept was 4.613. This suggests that on average, we expect that bird body mass (g) to increase by 0.0739 grams for each 1 mm of increase in right wing length. We expect bird body mass to increase by 0.0743 grams for each 1 mm of increase in bird tarsus length. 
+
+#### Black-throated blue warbler data source: 
+- Rodenhouse, N., R. Holmes, S. Sillett, and M. Webster. 2019. Black-throated Blue Warbler capture histories, Hubbard Brook Experimental Forest, 1986 - 2010 ver 4. Environmental Data Initiative. https://doi.org/10.6073/pasta/ea985022acfdb76cd7beeaf8da6c39b1
