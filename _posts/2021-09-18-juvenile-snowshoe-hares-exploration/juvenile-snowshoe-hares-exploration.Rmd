@@ -1,7 +1,7 @@
 ---
 title: "Juvenile snowshoe hares exploration"
 description: |
-  A short description of the post.
+  Snowshoe hare data exploration and linear regression in Bonanza Creek Experimental Forest: 1999-Present.
 author:
   - name: Elmera Azadpour
     url: {}

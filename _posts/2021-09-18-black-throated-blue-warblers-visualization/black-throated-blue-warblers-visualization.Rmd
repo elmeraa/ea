@@ -1,7 +1,7 @@
 ---
 title: "Black-Throated Blue Warblers linear model selection"
 description: |
-  A short description of the post.
+ Model Selection and Justification of Black-throated Blue Warbler capture histories, Hubbard Brook Experimental Forest, 1986 - 2010  .
 author:
   - name: Elmera Azadpour
     url: {}
